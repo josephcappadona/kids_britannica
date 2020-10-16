@@ -24,7 +24,7 @@ from string import ascii_lowercase
 from pprint import pprint
 import wget
 import os
-from m3u8downloader import M3u8Downloader
+#from m3u8downloader import M3u8Downloader
 from pathlib import Path
 import json
 import shutil
@@ -615,6 +615,7 @@ def download_image(url, output_path):
     wget.download(url, out=str(output_path))
 
 def download_video(url, output_path):
+    raise NotImplemented
     url_path = Path(url)
     if url_path.suffix == '.m3u8':
         downloader = M3u8Downloader(url, output_path)
