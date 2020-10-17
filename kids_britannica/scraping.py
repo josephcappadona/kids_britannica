@@ -193,7 +193,7 @@ def get_adjacent_articles(article_html):
     article_soup = BeautifulSoup(article_html, features='html.parser')
     adjacent_article_divs = [li.find('a') for li in article_soup.find('ul', {'class': 'bk-reading-levels'}).find_all('li')]
     adjacent_articles = [f"https://kids.britannica.com{a.get('href')}" for a in adjacent_article_divs if a is not None and a.get('href') is not None and 'active' not in a.get('class')]
-    return adjacent_articles
+    return {get_tier_from_url(url):get_id_from_url(url) for url in adjacent_articles}
 
 
 def scrape_article(article_url, session=None):
@@ -227,6 +227,7 @@ def scrape_article(article_url, session=None):
         'title': title,
         'text': text,
         'media': media,
+        'adjacent_articles': adjacent_articles,
         'related_articles': related_articles,
         'related_websites': related_websites,
         'htmls': {

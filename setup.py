@@ -14,7 +14,8 @@ setup(
         "beautifulsoup4",
         "dataclasses",
         "m3u8downloader @ git+https://github.com/josephcappadona/m3u8downloader.git#egg=m3u8downloader",
-        "munch"
+        "munch",
+        "jsonextended"
     ],
     author="Joseph Cappadona",
     author_email="josephcappadona27@gmail.com",

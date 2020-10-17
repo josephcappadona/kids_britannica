@@ -25,3 +25,6 @@ import random as rand
 import yaml
 import argparse
 from munch import Munch
+from jsonextended import edict, plugins, example_mockpaths
+plugins.load_builtin_plugins('parsers')
+plugins.view_plugins('parsers')

@@ -5,17 +5,21 @@ from .download import ArticleDownloader
 from .scraping import get_adjacent_articles
 
 
-class Article(Munch):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'adjacent_ids' not in self:
-            self['adjacent_ids'] = {get_tier_from_url(url):get_id_from_url(url) for url in get_adjacent_articles(self.htmls['text'])}
+# class Article(File):
+#     def __init__(self, filename):
+#         super().__init__(self, open(filename))
+#         #self['adjacent_ids'] = {get_tier_from_url(url):get_id_from_url(url) for url in get_adjacent_articles(self['htmls']['text'])}
+
+Article = edict.LazyLoad
 
 class KidsBritannicaDataSet:
     def __init__(self, data_dir='data', username=None, password=None):
         make_directories(data_dir)
         self.data_dir = Path(data_dir)
         self.session = login(username, password)
+        self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
+        self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
+        self.scholars_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='scholars')
     
     @property
     def articles(self):
@@ -25,27 +29,30 @@ class KidsBritannicaDataSet:
             yield article
         for article in self.scholars_articles:
             yield article
+
+    @property
+    def article_paths(self):
+        for json_path in self.kids_article_paths:
+            yield json_path
+        for json_path in self.students_article_paths:
+            yield json_path
+        for json_path in self.scholars_article_paths:
+            yield json_path
     
     @property
     def kids_articles(self):
-        if not hasattr(self, 'kids_article_paths'):
-            self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
         for json_path in self.kids_article_paths:
-            yield Article(**json.load(open(json_path, 'rt')))
+            yield Article(json_path)
     
     @property
     def students_articles(self):
-        if not hasattr(self, 'students_article_paths'):
-            self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
         for json_path in self.students_article_paths:
-            yield Article(**json.load(open(json_path, 'rt')))
+            yield Article(json_path)
     
     @property
     def scholars_articles(self):
-        if not hasattr(self, 'scholars_article_paths'):
-            self.scholars_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='scholars')
         for json_path in self.scholars_article_paths:
-            yield Article(**json.load(open(json_path, 'rt')))
+            yield Article(json_path)
     
     @property
     def metadata(self):
