@@ -13,9 +13,8 @@ setup(
         "numpy",
         "beautifulsoup4",
         "dataclasses",
-    ],
-    dependency_links=[
-        "https://github.com/josephcappadona/m3u8downloader.git#egg=m3u8downloader"
+        "m3u8downloader @ git+https://github.com/josephcappadona/m3u8downloader.git#egg=m3u8downloader",
+        "munch"
     ],
     author="Joseph Cappadona",
     author_email="josephcappadona27@gmail.com",

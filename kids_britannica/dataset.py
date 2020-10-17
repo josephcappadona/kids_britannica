@@ -2,6 +2,14 @@ from .imports import *
 from .utils import *
 from .urls import *
 from .download import ArticleDownloader
+from .scraping import get_adjacent_articles
+
+
+class Article(Munch):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'adjacent_ids' not in self:
+            self['adjacent_ids'] = {get_tier_from_url(url):get_id_from_url(url) for url in get_adjacent_articles(self.htmls['text'])}
 
 class KidsBritannicaDataSet:
     def __init__(self, data_dir='data', username=None, password=None):
@@ -23,21 +31,21 @@ class KidsBritannicaDataSet:
         if not hasattr(self, 'kids_article_paths'):
             self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
         for json_path in self.kids_article_paths:
-            yield json.load(open(json_path, 'rt'))
+            yield Article(**json.load(open(json_path, 'rt')))
     
     @property
     def students_articles(self):
         if not hasattr(self, 'students_article_paths'):
             self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
         for json_path in self.students_article_paths:
-            yield json.load(open(json_path, 'rt'))
+            yield Article(**json.load(open(json_path, 'rt')))
     
     @property
     def scholars_articles(self):
         if not hasattr(self, 'scholars_article_paths'):
             self.scholars_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='scholars')
         for json_path in self.scholars_article_paths:
-            yield json.load(open(json_path, 'rt'))
+            yield Article(**json.load(open(json_path, 'rt')))
     
     @property
     def metadata(self):
@@ -53,7 +61,7 @@ class KidsBritannicaDataSet:
     def compile_metadata(self):
         print('Compiling metadata...')
         metadata = []
-        metadata_keys = ['id', 'url', 'tier', 'title']
+        metadata_keys = ['id', 'url', 'tier', 'title', 'adjacent_ids']
         for article in self.articles:
             article_metadata = {key:article[key] for key in metadata_keys}
             metadata.append(article_metadata)

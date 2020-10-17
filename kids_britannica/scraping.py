@@ -189,6 +189,12 @@ def get_related_websites(article_url, session=None):
         pass
     return related_website_urls, related_websites_html
 
+def get_adjacent_articles(article_html):
+    article_soup = BeautifulSoup(article_html, features='html.parser')
+    adjacent_article_divs = [li.find('a') for li in article_soup.find('ul', {'class': 'bk-reading-levels'}).find_all('li')]
+    adjacent_articles = [f"https://kids.britannica.com{a.get('href')}" for a in adjacent_article_divs if a is not None and a.get('href') is not None and 'active' not in a.get('class')]
+    return adjacent_articles
+
 
 def scrape_article(article_url, session=None):
     """Scrapes the text, media, and metadata of a particular Encyclopedia Britannica Kids article.
@@ -210,6 +216,7 @@ def scrape_article(article_url, session=None):
     artcile_id = Path(article_url).name
     tier = get_tier_from_url(article_url)
     title, text, text_html = get_article_text(article_url, session=session)
+    adjacent_articles = get_adjacent_articles(text_html)
     media, media_html = get_article_media(article_url, session=session)
     related_articles, related_articles_pages_htmls = get_related_articles(article_url, session=session)
     related_websites, related_websites_page_html = get_related_websites(article_url, session=session)

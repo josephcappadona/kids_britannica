@@ -85,6 +85,7 @@ def get_all_urls(**kwargs):
     return all_urls
 
 def get_tier_from_url(article_url):
+    print(article_url)
     split = article_url.split('/')
     base_idx = split.index('kids.britannica.com')
     tier = split[base_idx + 1]
