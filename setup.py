@@ -1,12 +1,11 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals, with_statement)
-
 from setuptools import setup, find_packages
 
 setup(
     name="kids_britannica",
     version=0.1,
-    packages=find_packages(exclude=("utils",)),
+    packages=find_packages(),
     install_requires=[
         "requests",
         "wget",
@@ -14,7 +13,6 @@ setup(
         "numpy",
         "beautifulsoup4",
         "dataclasses",
-        "m3u8downloader"
     ],
     dependency_links=[
         "https://github.com/josephcappadona/m3u8downloader.git#egg=m3u8downloader"

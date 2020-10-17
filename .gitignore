@@ -130,5 +130,6 @@ dmypy.json
 
 # Library-specific files and folders
 data/
+data_small/
 *.zip
 log.txt
