@@ -2,7 +2,6 @@ from .imports import *
 from .utils import *
 from .urls import *
 from .download import ArticleDownloader
-from .scraping import get_adjacent_articles
 
 
 # class Article(File):
@@ -20,6 +19,10 @@ class KidsBritannicaDataSet:
         self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
         self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
         self.scholars_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='scholars')
+        metadata_filepath = self.data_dir / 'metadata.json'
+        if metadata_filepath.exists():
+            print('Loading metadata from file...')
+            self._metadata = json.load(open(metadata_filepath, 'rt'))
     
     @property
     def articles(self):
@@ -54,27 +57,27 @@ class KidsBritannicaDataSet:
         for json_path in self.scholars_article_paths:
             yield Article(json_path)
     
+    def article_by_id(self, article_id):
+        return Article(self.metadata[article_id]['path'])
+    
     @property
     def metadata(self):
         if not hasattr(self, '_metadata'):
-            metadata_path = self.data_dir / 'articles' / 'metadata.json'
-            if not metadata_path.exists():
-                self._metadata = self.compile_metadata()
-            else:
+            metadata_filepath = self.data_dir / 'metadata.json'
+            if metadata_filepath.exists():
                 print('Loading metadata from file...')
-                self._metadata = json.load(open(metadata_path, 'rt'))
+                self._metadata = json.load(open(metadata_filepath, 'rt'))
+            else:
+                print('Building metadata from scratch...')
+                metadata_keys = ['id', 'url', 'tier', 'title', 'adjacent_ids']
+                self._metadata = {}
+                for article, article_path in zip(self.articles, self.article_paths):
+                    article_metadata = {key:(article[key] if not isinstance(article[key], edict.LazyLoad) else article[key].to_dict()) for key in metadata_keys}
+                    article_metadata['path'] = article_path
+                    self._metadata[article_metadata['id']] = article_metadata
+                print('Writing metadata to file...')
+                write_json(metadata_filepath, self._metadata)
         return self._metadata
-
-    def compile_metadata(self):
-        print('Compiling metadata...')
-        metadata = []
-        metadata_keys = ['id', 'url', 'tier', 'title', 'adjacent_ids']
-        for article in self.articles:
-            article_metadata = {key:article[key] for key in metadata_keys}
-            metadata.append(article_metadata)
-        metadata_path = self.data_dir / 'articles' / 'metadata.json'
-        write_json(metadata_path, metadata)
-        return metadata
 
     def download_urls(self, overwrite=True, limit=None, verbose=1):
         data_dir = self.data_dir

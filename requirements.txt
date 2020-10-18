@@ -5,5 +5,5 @@ numpy==1.19.2
 beautifulsoup4==4.9.3
 dataclasses==0.6
 git+git://github.com/josephcappadona/m3u8downloader.git#egg=m3u8downloader
-munch=2.5.0
-jsonextended=0.7.11
+munch==2.5.0
+jsonextended==0.7.11
