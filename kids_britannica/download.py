@@ -4,9 +4,6 @@ from .urls import *
 from .scraping import scrape_article
 
 
-def sanitize_filename(filename):
-    return filename.replace('/', '_').replace(':', '-').replace('?', '').replace('*', '').replace('"', '\'')
-
 class ArticleDownloader:
     def __init__(self, data_dir='data', session=None, pool_size=2, chunk_size=1000, max_retries=1):
         self.data_dir = Path(data_dir)
