@@ -1,7 +1,7 @@
 from .imports import *
 from .utils import *
 from .urls import *
-from .download import ArticleDownloader
+from .download import ArticleDownloader, sanitize_filename
 
 
 # class Article(File):
@@ -19,10 +19,10 @@ class KidsBritannicaDataSet:
         self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
         self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
         self.scholars_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='scholars')
-        metadata_filepath = self.data_dir / 'metadata.json'
-        if metadata_filepath.exists():
+        self.metadata_filepath = self.data_dir / 'metadata.json'
+        if self.metadata_filepath.exists():
             print('Loading metadata from file...')
-            self._metadata = json.load(open(metadata_filepath, 'rt'))
+            self._metadata = json.load(open(self.metadata_filepath, 'rt'))
     
     @property
     def articles(self):
@@ -63,20 +63,20 @@ class KidsBritannicaDataSet:
     @property
     def metadata(self):
         if not hasattr(self, '_metadata'):
-            metadata_filepath = self.data_dir / 'metadata.json'
-            if metadata_filepath.exists():
+            if self.metadata_filepath.exists():
                 print('Loading metadata from file...')
-                self._metadata = json.load(open(metadata_filepath, 'rt'))
+                self._metadata = json.load(open(self.metadata_filepath, 'rt'))
             else:
-                print('Building metadata from scratch...')
+                print("Building metadata from scratch...")
+                print("This could take anywhere from a few seconds to a couple hours depending on how much data you're processing")
                 metadata_keys = ['id', 'url', 'tier', 'title', 'adjacent_ids']
                 self._metadata = {}
                 for article, article_path in zip(self.articles, self.article_paths):
                     article_metadata = {key:(article[key] if not isinstance(article[key], edict.LazyLoad) else article[key].to_dict()) for key in metadata_keys}
-                    article_metadata['path'] = article_path
+                    article_metadata['path'] = Path(article_path).as_posix()
                     self._metadata[article_metadata['id']] = article_metadata
                 print('Writing metadata to file...')
-                write_json(metadata_filepath, self._metadata)
+                write_json(self.metadata_filepath, self._metadata)
         return self._metadata
 
     def download_urls(self, overwrite=True, limit=None, verbose=1):
@@ -119,3 +119,22 @@ class KidsBritannicaDataSet:
         if len(article_paths) == 0:
             raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
         return article_paths
+    
+    def write_htmls(self, overwrite=False):
+        htmls_dir = self.data_dir / 'html'
+        os.makedirs(str(htmls_dir), exist_ok=True)
+        for id_ in sorted(list(self.metadata.keys())):
+            filename = f"{id_} {self.metadata[id_]['title']}.json"
+            filename = sanitize_filename(filename)
+            article_html_path = htmls_dir / filename
+            if not article_html_path.exists() or overwrite:
+                article = self.article_by_id(id_)
+                article_htmls = article['htmls'].to_dict()
+                write_json(article_html_path, article_htmls)
+    
+    def remove_htmls_from_articles(self):
+        for article, article_path in zip(self.articles, self.article_paths):
+            if 'htmls' in article:
+                a = article.to_dict()
+                del a['htmls']
+                write_json(article_path, a)
