@@ -15,6 +15,7 @@ class KidsBritannicaDataSet:
     def __init__(self, data_dir='data', username=None, password=None):
         make_directories(data_dir)
         self.data_dir = Path(data_dir)
+        self.articles_dir = self.data_dir / 'articles'
         self.session = login(username, password)
         self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
         self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
@@ -58,7 +59,11 @@ class KidsBritannicaDataSet:
             yield Article(json_path)
     
     def article_by_id(self, article_id):
-        return Article(self.metadata[article_id]['path'])
+        md = self.metadata[article_id]
+        filename = f"{md['id']} {md['title']}.json"
+        filename = sanitize_filename(filename)
+        article_path = self.articles_dir / md['tier'] / filename
+        return Article(article_path)
     
     @property
     def metadata(self):
@@ -72,8 +77,14 @@ class KidsBritannicaDataSet:
                 metadata_keys = ['id', 'url', 'tier', 'title', 'adjacent_ids']
                 self._metadata = {}
                 for article, article_path in zip(self.articles, self.article_paths):
-                    article_metadata = {key:(article[key] if not isinstance(article[key], edict.LazyLoad) else article[key].to_dict()) for key in metadata_keys}
-                    article_metadata['path'] = Path(article_path).as_posix()
+                    article_metadata = {}
+                    for key in metadata_keys:
+                        if key in article:
+                            if not isinstance(article[key], edict.LazyLoad):
+                                article_metadata[key] = article[key]
+                            else:
+                                article_metadata[key] = article[key].to_dict()
+                    article_metadata['path'] = article_path
                     self._metadata[article_metadata['id']] = article_metadata
                 print('Writing metadata to file...')
                 write_json(self.metadata_filepath, self._metadata)
