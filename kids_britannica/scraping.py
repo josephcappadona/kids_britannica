@@ -27,7 +27,7 @@ def get_article_text(article_html, article_url=None, session=None):
 
     article_text = []
     for section in article_sections:
-        section_title_div = section.find('header')
+        section_title_div = section.find(re.compile('^h[1-6]$'))
         if section_title_div:
             section_title = section_title_div.get_text().strip()
         else:
@@ -38,7 +38,7 @@ def get_article_text(article_html, article_url=None, session=None):
             text = clean_text(paragraph.get_text())
             if text:
                 section_text.append(text)
-        article_text.append((section_title, section_text))
+        article_text.append([section_title, section_text])
 
     return article_title, article_text, article_html
 
@@ -160,7 +160,7 @@ def get_related_articles(related_article_htmls, article_url=None, session=None):
         page = 1
         while True:
             try:
-                related_page_urls, related_page_query_html = get_related_articles_page(article_url, page)
+                related_page_urls, related_page_query_html = get_related_articles_page(None, article_url=article_url, page=page)
                 related_article_urls.extend(related_page_urls)
                 related_article_htmls.append(related_page_query_html)
                 page += 1
@@ -227,18 +227,7 @@ def scrape_article(article_url, session=None, data_dir=None):
     related_articles, related_articles_pages_htmls = get_related_articles(article_url, session=session)
     related_websites, related_websites_page_html = get_related_websites(article_url, session=session)
 
-    if data_dir is not None:
-        filename = f"{metadata['id']} {metadata['title']}.json"
-        filename = sanitize_filename(filename)
-        html_path = Path(data_dir) / 'html' / filename
-        htmls = {
-            'text': text_html,
-            'media': media_html,
-            'related_articles': related_articles_pages_htmls,
-            'related_websites': related_websites_page_html
-        }
-        write_json(htmls_path, htmls)
-    return {
+    article = {
         'url': article_url,
         'id': artcile_id,
         'tier': tier,
@@ -249,6 +238,50 @@ def scrape_article(article_url, session=None, data_dir=None):
         'related_articles': related_articles,
         'related_websites': related_websites,
     }
+    htmls = {
+        'text': text_html,
+        'media': media_html,
+        'related_articles': related_articles_pages_htmls,
+        'related_websites': related_websites_page_html
+    }
+
+    # if data_dir is not None:
+    #     filename = f"{metadata['id']} {metadata['title']}.json"
+    #     filename = sanitize_filename(filename)
+    #     html_path = Path(data_dir) / 'html' / filename
+    #     write_json(htmls_path, htmls)
+    return article, htmls
+
+def scrape_htmls(article_url, session=None, sleep_time=0.1, write=False, data_dir=None):
+    if session is None:
+        raise ValueError
+    id_ = get_id_from_url(article_url)
+
+    title, _, text_html = get_article_text(None, article_url=article_url, session=session)
+    sleep(sleep_time)
+
+    media_url = f"{article_url}/media"
+    media_html = session.get(media_url).text
+    sleep(sleep_time)
+
+    related_websites_url = f"{article_url}/related/websites"
+    related_websites_html = session.get(related_websites_url).text
+    sleep(sleep_time)
+
+    _, related_article_htmls = get_related_articles(None, article_url=article_url, session=session)
+
+    htmls = {
+        'text': text_html,
+        'media': media_html,
+        'related_articles': related_article_htmls,
+        'related_websites': related_websites_html
+    }
+    if data_dir is not None:
+        filename = f"{id_} {title}.json"
+        filename = sanitize_filename(filename)
+        htmls_path = Path(data_dir) / 'html' / filename
+        write_json(htmls_path, htmls)
+    return htmls
 
 def parse_article_from_html(article_id, ds):
     metadata = ds.metadata[article_id]

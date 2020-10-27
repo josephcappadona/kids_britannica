@@ -2,14 +2,30 @@ from .imports import *
 from .utils import *
 from .urls import *
 from .download import ArticleDownloader, sanitize_filename
-
+from .scraping import get_article_text
+from .statistics import *
 
 # class Article(File):
 #     def __init__(self, filename):
 #         super().__init__(self, open(filename))
 #         #self['adjacent_ids'] = {get_tier_from_url(url):get_id_from_url(url) for url in get_adjacent_articles(self['htmls']['text'])}
 
-Article = edict.LazyLoad
+#Article = edict.LazyLoad
+class Article(edict.LazyLoad):
+    def __init__(self, path):
+        path = Path(path)
+        if path.exists():
+            super().__init__(path)
+        else:
+            try:
+                #print(f"Could not find article ({str(path)}) at expected path.")
+                # find the path that matches the ID
+                query = '/'.join(path.parts[:-1]) + '/' + path.parts[-1].split(' ')[0] + ' *.json'
+                match = glob(query)[0]
+                path = Path(match)
+                super().__init__(path)
+            except:
+                raise ValueError(f"Could not find article {str(path)}")
 
 class KidsBritannicaDataSet:
     def __init__(self, data_dir='data', username=None, password=None):
@@ -131,11 +147,13 @@ class KidsBritannicaDataSet:
             raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
         return article_paths
     
-    def write_htmls(self, overwrite=False):
+    def write_htmls(self, mds, overwrite=False):
         htmls_dir = self.data_dir / 'html'
         os.makedirs(str(htmls_dir), exist_ok=True)
-        for id_ in sorted(list(self.metadata.keys())):
-            filename = f"{id_} {self.metadata[id_]['title']}.json"
+        for md in mds:
+            url = md['url']
+
+            filename = f"{md['id']} {md['title']}.json"
             filename = sanitize_filename(filename)
             article_html_path = htmls_dir / filename
             if not article_html_path.exists() or overwrite:
@@ -149,3 +167,64 @@ class KidsBritannicaDataSet:
                 a = article.to_dict()
                 del a['htmls']
                 write_json(article_path, a)
+    
+    def fix_headers(self, mds):
+        for md in mds:
+            filename = f"{md['id']} {md['title']}.json"
+            filename = sanitize_filename(filename)
+            html_path = self.data_dir / 'html' / filename
+            article_path = self.data_dir / 'articles' / md['tier'] / filename
+            if html_path.exists() and article_path.exists():
+                htmls = edict.LazyLoad(html_path)
+                text_html = htmls['text']
+                _, article_text, _ = get_article_text(text_html)
+                article_text = list(article_text)
+                
+                article = json.load(open(article_path, 'rt'))
+                if article_text != article['text']:
+                    article['text'] = article_text
+                    write_json(article_path, article)
+                    print(f"Updated {article['id']} ({article['tier']}) {article['title']}")
+                else:
+                    print(f"No update needed {article['id']} ({article['tier']}) {article['title']}")
+    
+    @property
+    def statistics(self):
+        if not hasattr(self, '_statistics'):
+            stats_path = self.data_dir / 'stats.json'
+            if stats_path.exists():
+                print('Loading stats from file...')
+                stats, structures = json.load(open(stats_path, 'rt'))
+            else:
+                print('Building stats from scratch...')
+                stats = {}
+                structures = {}
+                limit = None
+                for tier, articles in zip(['kids', 'students', 'scholars'],
+                                        [self.kids_articles, self.students_articles, self.scholars_articles]):
+                    stats[tier], structures[tier] = aggregate_statistics(articles, limit=limit)
+                write_json(stats_path, [stats, structures])
+            self._statistics = stats
+            self._structures = structures
+        return self._statistics
+
+    @property
+    def structures(self):
+
+        if not hasattr(self, '_structures'):
+            stats_path = self.data_dir / 'stats.json'
+            if stats_path.exists():
+                print('Loading stats from file...')
+                stats, structures = json.load(open(stats_path, 'rt'))
+            else:
+                print('Building stats from scratch...')
+                stats = {}
+                structures = {}
+                limit = None
+                for tier, articles in zip(['kids', 'students', 'scholars'],
+                                        [self.kids_articles, self.students_articles, self.scholars_articles]):
+                    stats[tier], structures[tier] = aggregate_statistics(articles, limit=limit)
+                write_json(stats_path, [stats, structures])
+            self._statistics = stats
+            self._structures = structures
+        return self._structures

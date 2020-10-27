@@ -24,6 +24,7 @@ import traceback
 import random as rand
 import yaml
 import argparse
+import re
 from munch import Munch
 from jsonextended import edict, plugins, example_mockpaths
 plugins.load_builtin_plugins('parsers')
