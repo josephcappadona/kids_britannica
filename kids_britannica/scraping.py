@@ -17,8 +17,10 @@ def get_article_text(article_html, article_url=None, session=None):
     """
     if article_html is None:
         sleep(SLEEP_TIME)
-        article_html = session.get(article_url).text
+        response = session.get(article_url)
+        article_html = response.text
     article_soup = BeautifulSoup(article_html, features='html.parser')
+    article_url = article_soup.find('meta', {'property': 'og:url'}).get('content')
     article_title = article_soup.find('body').find('header').find('h1').get_text()
 
     article_sections = article_soup.find('article').find_all('div', {'class': 'panel'})
@@ -40,7 +42,7 @@ def get_article_text(article_html, article_url=None, session=None):
                 section_text.append(text)
         article_text.append([section_title, section_text])
 
-    return article_title, article_text, article_html
+    return article_url, article_title, article_text, article_html
 
 def get_article_media(media_html, article_url=None, session=None):
     """Retrieves the media content of a particular Encyclopedia Britannica Kids article.
@@ -70,7 +72,9 @@ def get_article_media(media_html, article_url=None, session=None):
     if media_html is None:
         sleep(SLEEP_TIME)
         media_url = f"{article_url}/media"
-        media_html = session.get(media_url).text
+        response = session.get(media_url)
+        media_url = response.url
+        media_html = response.text
     media_soup = BeautifulSoup(media_html, features='html.parser')
 
     article_media = []
@@ -127,7 +131,9 @@ def get_related_articles_page(related_page_html, article_url=None, page=0, sessi
     if related_page_html is None:
         sleep(SLEEP_TIME)
         related_page_url = f"{article_url}/related/main?page={page}"
-        related_page_html = session.get(related_page_url).text
+        response = session.get(related_page_url)
+        related_page_url = response.url
+        related_page_html = response.text
     related_page_soup = BeautifulSoup(related_page_html, features='html.parser')
 
     related_page_urls = []
@@ -179,7 +185,9 @@ def get_related_websites(related_websites_html, article_url=None, session=None):
     if related_websites_html is None:
         sleep(SLEEP_TIME)
         related_websites_url = f"{article_url}/related/websites"
-        related_websites_html = session.get(related_websites_url).text
+        response = session.get(related_websites_url)
+        related_websites_url = response.url
+        related_websites_html = response.text
     related_websites_soup = BeautifulSoup(related_websites_html, features='html.parser')
 
     related_website_urls = []
@@ -192,14 +200,13 @@ def get_related_websites(related_websites_html, article_url=None, session=None):
         pass
     return related_website_urls, related_websites_html
 
-def get_adjacent_ids(article_html):
+def get_aligned_urls(article_html):
     article_soup = BeautifulSoup(article_html, features='html.parser')
     adjacent_article_divs = [li.find('a') for li in article_soup.find('ul', {'class': 'bk-reading-levels'}).find_all('li')]
     adjacent_articles = [f"https://kids.britannica.com{a.get('href')}" for a in adjacent_article_divs if a is not None and a.get('href') is not None and 'active' not in a.get('class')]
-    return {get_tier_from_url(url):get_id_from_url(url) for url in adjacent_articles}
+    return {get_tier_from_url(url):url for url in adjacent_articles}
 
-
-def scrape_article(article_url, session=None, data_dir=None):
+def scrape_article(url, session=None, data_dir=None):
     """Scrapes the text, media, and metadata of a particular Encyclopedia Britannica Kids article.
 
     Args:
@@ -216,25 +223,26 @@ def scrape_article(article_url, session=None, data_dir=None):
             * related_websites [list of strings]
             * htmls [dictionary]
     """
-    tier = get_tier_from_url(article_url)
-    id_ = get_id_from_url(article_url)
+    tier = get_tier_from_url(url)
+    id_ = Path(url).name
 
-    artcile_id = Path(article_url).name
-    tier = get_tier_from_url(article_url)
-    title, text, text_html = get_article_text(article_url, session=session)
-    adjacent_ids = get_adjacent_ids(text_html)
-    media, media_html = get_article_media(article_url, session=session)
-    related_articles, related_articles_pages_htmls = get_related_articles(article_url, session=session)
-    related_websites, related_websites_page_html = get_related_websites(article_url, session=session)
+    tier = get_tier_from_url(url)
+    url, title, text, text_html = get_article_text(url, session=session)
+    aligned_urls = get_aligned_urls(text_html)
+    aligned_ids = {t:get_id_from_url(u) for t, u in aligned_urls.items()}
+    media, media_html = get_article_media(url, session=session)
+    related_articles, related_articles_pages_htmls = get_related_articles(url, session=session)
+    related_websites, related_websites_page_html = get_related_websites(url, session=session)
 
     article = {
-        'url': article_url,
-        'id': artcile_id,
+        'url': url,
+        'id': id_,
         'tier': tier,
         'title': title,
         'text': text,
         'media': media,
-        'adjacent_ids': adjacent_ids,
+        'aligned_ids': aligned_ids,
+        'aligned_urls': aligned_urls,
         'related_articles': related_articles,
         'related_websites': related_websites,
     }
@@ -252,23 +260,23 @@ def scrape_article(article_url, session=None, data_dir=None):
     #     write_json(htmls_path, htmls)
     return article, htmls
 
-def scrape_htmls(article_url, session=None, sleep_time=0.1, write=False, data_dir=None):
+def scrape_htmls(url, session=None, sleep_time=0.1, data_dir=None):
     if session is None:
-        raise ValueError
-    id_ = get_id_from_url(article_url)
+        raise ValueError("No session provided")
+    id_ = Path(url).name
 
-    title, _, text_html = get_article_text(None, article_url=article_url, session=session)
+    url, title, _, text_html = get_article_text(None, article_url=url, session=session)
     sleep(sleep_time)
 
-    media_url = f"{article_url}/media"
+    media_url = f"{url}/media"
     media_html = session.get(media_url).text
     sleep(sleep_time)
 
-    related_websites_url = f"{article_url}/related/websites"
+    related_websites_url = f"{url}/related/websites"
     related_websites_html = session.get(related_websites_url).text
     sleep(sleep_time)
 
-    _, related_article_htmls = get_related_articles(None, article_url=article_url, session=session)
+    _, related_article_htmls = get_related_articles(None, article_url=url, session=session)
 
     htmls = {
         'text': text_html,
@@ -281,16 +289,11 @@ def scrape_htmls(article_url, session=None, sleep_time=0.1, write=False, data_di
         filename = sanitize_filename(filename)
         htmls_path = Path(data_dir) / 'html' / filename
         write_json(htmls_path, htmls)
+        print(f"Wrote htmls to {str(htmls_path)}")
     return htmls
 
-def parse_article_from_html(article_id, ds):
-    metadata = ds.metadata[article_id]
-    data_dir = ds.data_dir
-    
-    filename = f"{metadata['id']} {metadata['title']}.json"
-    filename = sanitize_filename(filename)
-
-    htmls_path = data_dir / 'html' / filename
+def parse_article_from_html(htmls_path, data_dir=None, overwrite=False):
+    htmls_path = Path(htmls_path)
     if htmls_path.exists():
         htmls = json.load(open(htmls_path, 'rt'))
         text_html = htmls['text']
@@ -298,24 +301,36 @@ def parse_article_from_html(article_id, ds):
         related_articles_pages_htmls = htmls['related_articles']
         related_websites_page_html = htmls['related_websites']
 
-        url = metadata['url']
-        artcile_id = metadata['id']
-        tier = metadata['tier']
-        title, text, _ = get_article_text(text_html)
-        adjacent_ids = get_adjacent_ids(text_html)
+        url, title, text, _ = get_article_text(text_html)
+        id_ = get_id_from_url(url)
+        tier = get_tier_from_url(url)
+        aligned_urls = get_aligned_urls(text_html)
+        aligned_ids = {t:get_id_from_url(u) for t, u in aligned_urls.items()}
         media, _ = get_article_media(media_html)
         related_articles, _ = get_related_articles(related_articles_pages_htmls)
         related_websites, _ = get_related_websites(related_websites_page_html)
 
-        return {
+        article = {
             'url': url,
-            'id': artcile_id,
+            'id': id_,
             'tier': tier,
             'title': title,
             'text': text,
             'media': media,
-            'adjacent_ids': adjacent_ids,
+            'aligned_ids': aligned_ids,
+            'aligned_urls': aligned_urls,
             'related_articles': related_articles,
             'related_websites': related_websites,
         }
+
+        if data_dir is not None:
+            data_dir = Path(data_dir)
+            filename = f"{id_} {title}.json"
+            filename = sanitize_filename(filename)
+            article_path = data_dir / 'articles' / tier / filename
+            if not article_path.exists() or overwrite:
+                write_json(article_path, article)
+                print(f"Wrote {str(article_path)}")
+
+        return article
     return None

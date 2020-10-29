@@ -2,7 +2,7 @@ from .imports import *
 from .utils import *
 from .urls import *
 from .download import ArticleDownloader, sanitize_filename
-from .scraping import get_article_text
+from .scraping import get_article_text, parse_article_from_html
 from .statistics import *
 
 # class Article(File):
@@ -90,7 +90,7 @@ class KidsBritannicaDataSet:
             else:
                 print("Building metadata from scratch...")
                 print("This could take anywhere from a few seconds to a couple hours depending on how much data you're processing")
-                metadata_keys = ['id', 'url', 'tier', 'title', 'adjacent_ids']
+                metadata_keys = ['id', 'url', 'tier', 'title', 'aligned_urls']
                 self._metadata = {}
                 for article, article_path in zip(self.articles, self.article_paths):
                     article_metadata = {}
@@ -144,7 +144,8 @@ class KidsBritannicaDataSet:
     def get_article_paths(data_dir, tier='*'):
         article_paths = glob(str(data_dir / 'articles' / tier / '*.json'))
         if len(article_paths) == 0:
-            raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
+            #raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
+            pass
         return article_paths
     
     def write_htmls(self, mds, overwrite=False):
@@ -228,3 +229,10 @@ class KidsBritannicaDataSet:
             self._statistics = stats
             self._structures = structures
         return self._structures
+    
+    @staticmethod
+    def write_articles_from_html(data_dir, overwrite=False):
+        data_dir = Path(data_dir)
+        html_paths = glob(str(data_dir / 'html' / '*.json'))
+        for html_path in html_paths:
+            article = parse_article_from_html(html_path, data_dir=data_dir, overwrite=overwrite)
