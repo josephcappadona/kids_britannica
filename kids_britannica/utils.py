@@ -73,6 +73,13 @@ def get_chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
-        
+
+def unicodeToAscii(s):
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', s)
+        if unicodedata.category(c) != 'Mn'
+        and c in all_letters
+    )
+
 def sanitize_filename(filename):
-    return filename.replace('/', '_').replace(':', '-').replace('?', '').replace('*', '').replace('"', '\'')
+    return unicodeToAscii(filename).replace('/', '_').replace(':', '-').replace('?', '').replace('*', '').replace('"', '\'')
