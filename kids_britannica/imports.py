@@ -27,5 +27,6 @@ import argparse
 import re
 from munch import Munch
 from jsonextended import edict, plugins, example_mockpaths
+import unicodedata
 plugins.load_builtin_plugins('parsers')
 plugins.view_plugins('parsers')
