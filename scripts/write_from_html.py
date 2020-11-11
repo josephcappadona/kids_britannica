@@ -1,0 +1,2 @@
+from kids_britannica import KidsBritannicaDataSet
+KidsBritannicaDataSet.write_articles_from_html('data')

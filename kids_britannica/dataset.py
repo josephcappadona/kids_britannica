@@ -233,6 +233,7 @@ class KidsBritannicaDataSet:
     @staticmethod
     def write_articles_from_html(data_dir, overwrite=False):
         data_dir = Path(data_dir)
+        make_directories(data_dir)
         html_paths = glob(str(data_dir / 'html' / '*.json'))
         for html_path in html_paths:
             article = parse_article_from_html(html_path, data_dir=data_dir, overwrite=overwrite)

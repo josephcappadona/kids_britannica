@@ -74,12 +74,10 @@ def get_chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-def unicodeToAscii(s):
+all_letters = set(string.ascii_letters + string.digits + " .,;'")
+def sanitize_filename(filename):
     return ''.join(
-        c for c in unicodedata.normalize('NFD', s)
+        c for c in unicodedata.normalize('NFD', filename)
         if unicodedata.category(c) != 'Mn'
         and c in all_letters
     )
-
-def sanitize_filename(filename):
-    return unicodeToAscii(filename).replace('/', '_').replace(':', '-').replace('?', '').replace('*', '').replace('"', '\'')
