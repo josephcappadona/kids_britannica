@@ -90,7 +90,7 @@ class KidsBritannicaDataSet:
             else:
                 print("Building metadata from scratch...")
                 print("This could take anywhere from a few seconds to a couple hours depending on how much data you're processing")
-                metadata_keys = ['id', 'url', 'tier', 'title', 'aligned_urls']
+                metadata_keys = ['id', 'url', 'tier', 'title', 'aligned_ids', 'aligned_urls']
                 self._metadata = {}
                 for article, article_path in zip(self.articles, self.article_paths):
                     article_metadata = {}
