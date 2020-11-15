@@ -11,7 +11,7 @@ Original file is located at
 from .utils import write_json
 from pprint import pprint
 import nltk
-nltk.download('punkt')
+nltk.download('punkt', quiet=True)
 from nltk.tokenize import sent_tokenize, word_tokenize
 import plac
 import spacy
@@ -85,6 +85,7 @@ def aggregate_statistics(articles, limit=None):
     n_entities = sum(entity_count_list)
     n_noun_phrases = sum(noun_phrase_counts)
     
+    avg_num_sentences = n_sentences / n_articles
     avg_parse_height = sum(parse_heights) / len(parse_heights)
     avg_sentence_length = n_tokens / n_sentences
     avg_paragraph_count = n_paragraphs / n_articles
@@ -98,11 +99,12 @@ def aggregate_statistics(articles, limit=None):
         'n_paragraphs': n_paragraphs,
         'n_entities': n_entities,
         'n_noun_phrases': n_noun_phrases,
-        'avg_article_length': avg_article_length,
-        'avg_parse_height': avg_parse_height,
-        'avg_sentence_length': avg_sentence_length,
-        'avg_entity_count': avg_entity_count,
-        'avg_noun_phrase_count': avg_noun_phrase_count
+        'avg_paragraphs_per_article': avg_paragraph_count,
+        'avg_sentences_per_article': avg_num_sentences,
+        'avg_tokens_per_article': avg_article_length,
+        'avg_sentence_parse_height': avg_parse_height,
+        'avg_entities_per_sentence': avg_entity_count,
+        'avg_noun_phrases_per_sentence': avg_noun_phrase_count
     }, {
         'sentence_lengths': sentence_lengths,
         'parse_heights': parse_heights,
