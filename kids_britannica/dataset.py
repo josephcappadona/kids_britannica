@@ -41,6 +41,13 @@ class KidsBritannicaDataSet:
             print('Loading metadata from file...')
             self._metadata = json.load(open(self.metadata_filepath, 'rt'))
     
+    def article_by_id(self, article_id):
+        md = self.metadata[article_id]
+        filename = f"{md['id']} {md['title']}.json"
+        filename = sanitize_filename(filename)
+        article_path = self.articles_dir / md['tier'] / filename
+        return Article(article_path)
+    
     @property
     def articles(self):
         for article in self.kids_articles:
@@ -74,13 +81,6 @@ class KidsBritannicaDataSet:
         for json_path in self.scholars_article_paths:
             yield Article(json_path)
     
-    def article_by_id(self, article_id):
-        md = self.metadata[article_id]
-        filename = f"{md['id']} {md['title']}.json"
-        filename = sanitize_filename(filename)
-        article_path = self.articles_dir / md['tier'] / filename
-        return Article(article_path)
-    
     @property
     def metadata(self):
         if not hasattr(self, '_metadata'):
@@ -89,7 +89,8 @@ class KidsBritannicaDataSet:
                 self._metadata = json.load(open(self.metadata_filepath, 'rt'))
             else:
                 print("Building metadata from scratch...")
-                print("This could take anywhere from a few seconds to a couple hours depending on how much data you're processing")
+                print("This could take anywhere from a few seconds to a couple hours depending "
+                      "on how much data you're processing and the speed of your computer")
                 metadata_keys = ['id', 'url', 'tier', 'title', 'aligned_ids', 'aligned_urls']
                 self._metadata = {}
                 for article, article_path in zip(self.articles, self.article_paths):
@@ -139,55 +140,6 @@ class KidsBritannicaDataSet:
     @staticmethod
     def download_media(data_dir='data'):
         raise NotImplemented
-
-    @staticmethod
-    def get_article_paths(data_dir, tier='*'):
-        article_paths = glob(str(data_dir / 'articles' / tier / '*.json'))
-        if len(article_paths) == 0:
-            #raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
-            pass
-        return article_paths
-    
-    def write_htmls(self, mds, overwrite=False):
-        htmls_dir = self.data_dir / 'html'
-        os.makedirs(str(htmls_dir), exist_ok=True)
-        for md in mds:
-            url = md['url']
-
-            filename = f"{md['id']} {md['title']}.json"
-            filename = sanitize_filename(filename)
-            article_html_path = htmls_dir / filename
-            if not article_html_path.exists() or overwrite:
-                article = self.article_by_id(id_)
-                article_htmls = article['htmls'].to_dict()
-                write_json(article_html_path, article_htmls)
-    
-    def remove_htmls_from_articles(self):
-        for article, article_path in zip(self.articles, self.article_paths):
-            if 'htmls' in article:
-                a = article.to_dict()
-                del a['htmls']
-                write_json(article_path, a)
-    
-    def fix_headers(self, mds):
-        for md in mds:
-            filename = f"{md['id']} {md['title']}.json"
-            filename = sanitize_filename(filename)
-            html_path = self.data_dir / 'html' / filename
-            article_path = self.data_dir / 'articles' / md['tier'] / filename
-            if html_path.exists() and article_path.exists():
-                htmls = edict.LazyLoad(html_path)
-                text_html = htmls['text']
-                _, article_text, _ = get_article_text(text_html)
-                article_text = list(article_text)
-                
-                article = json.load(open(article_path, 'rt'))
-                if article_text != article['text']:
-                    article['text'] = article_text
-                    write_json(article_path, article)
-                    print(f"Updated {article['id']} ({article['tier']}) {article['title']}")
-                else:
-                    print(f"No update needed {article['id']} ({article['tier']}) {article['title']}")
     
     @property
     def statistics(self):
@@ -229,6 +181,13 @@ class KidsBritannicaDataSet:
             self._statistics = stats
             self._structures = structures
         return self._structures
+
+    @staticmethod
+    def get_article_paths(data_dir, tier='*'):
+        article_paths = glob(str(data_dir / 'articles' / tier / '*.json'))
+        if len(article_paths) == 0:
+            raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
+        return article_paths
     
     @staticmethod
     def write_articles_from_html(data_dir, overwrite=False):
