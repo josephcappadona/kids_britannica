@@ -305,6 +305,7 @@ def parse_article_from_html(htmls_path, data_dir=None, overwrite=False):
         id_ = get_id_from_url(url)
         tier = get_tier_from_url(url)
         aligned_urls = get_aligned_urls(text_html)
+        aligned_urls[tier] = url
         aligned_ids = {t:get_id_from_url(u) for t, u in aligned_urls.items()}
         media, _ = get_article_media(media_html)
         related_articles, _ = get_related_articles(related_articles_pages_htmls)
