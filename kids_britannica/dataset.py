@@ -7,10 +7,10 @@ def Article(p):
     except:
         # if error with filename, glob for the article by its id
         path = Path(p)
-        query = str(p.parent / f"{p.stem.split(' '[0])} *.json")
+        query = str(path.parent / f"{path.stem.split(' ')[0]} *.json")
         fps = glob(query)
         if fps:
-            return fps[0]
+            return json.load(open(fps[0]))
         else:
             return None
         
@@ -42,7 +42,7 @@ class KidsBritannicaDataSet:
         elif size == 'small':
             small_dir = data_dir / 'kbds_small'
 
-            article_url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
+            article_url = 'https://drive.google.com/uc?id=1WYNOwQ3vrnoZvtfR6ym3n-iP1Ty-Chhj'
             article_output = small_dir / 'kbds_small_articles.zip'
 
             media_url = None
@@ -52,7 +52,7 @@ class KidsBritannicaDataSet:
         
         output_dir = article_output.parent
         articles_dir = output_dir / 'articles'
-        if not output_dir.exists() or overwrite:
+        if not articles_dir.exists() or overwrite:
             download_and_unzip(article_url, article_output)
             if download_media and media_url:
                 download_and_unzip(media_url, media_output)
@@ -247,6 +247,7 @@ class KidsBritannicaDataSet:
             filename = f"{article['id']} {article['title']}.json"
             filename = sanitize_filename(filename)
             article_path = article_dir / article['tier'] / filename
+            print(str(article_path))
             write_json(article_path, article)
-        print(f'Wrote {len(article_ids)} to {str(article_path)}')
+        print(f'Wrote {len(article_ids)} articles to {str(article_dir)}')
 
