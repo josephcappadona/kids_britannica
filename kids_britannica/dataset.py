@@ -3,7 +3,6 @@ from .utils import *
 from .urls import *
 from .download import ArticleDownloader, sanitize_filename
 from .scraping import get_article_text, parse_article_from_html
-from .statistics import *
 
 # class Article(File):
 #     def __init__(self, filename):
@@ -143,6 +142,7 @@ class KidsBritannicaDataSet:
     
     @property
     def statistics(self):
+        from .statistics import *
         if not hasattr(self, '_statistics'):
             stats_path = self.data_dir / 'stats.json'
             if stats_path.exists():
@@ -163,7 +163,7 @@ class KidsBritannicaDataSet:
 
     @property
     def structures(self):
-
+        from .statistics import aggregate_statistics
         if not hasattr(self, '_structures'):
             stats_path = self.data_dir / 'stats.json'
             if stats_path.exists():
