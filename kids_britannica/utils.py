@@ -68,12 +68,28 @@ def sanitize_filename(filename):
         and c in all_letters
     )
 
-def download_and_unzip(url, zip_output):
+def download_and_unzip(url, zip_output, overwrite=False):
     import gdown, zipfile
-    os.makedirs(zip_output.parent, exist_ok=True)
+    data_dir = zip_output.parent
+    make_directories(data_dir)
+    
     print(f'Downloading {zip_output.name} from {url} ...')
-    gdown.download(url, str(zip_output), quiet=False)
+    if not zip_output.exists() or overwrite:
+        gdown.download(url, str(zip_output), quiet=False)
     with zipfile.ZipFile(zip_output, 'r') as zip_ref:
-        zip_ref.extractall(zip_output.parent)
+        #zip_ref.extractall(zip_output.parent)
+        
+        for info in zip_ref.infolist():
+            outpath = data_dir / Path(info.filename)
+            bufsiz = 16 * 1024
+            if not outpath.is_dir():
+                with zip_ref.open(info) as fin, open(outpath, 'wb') as fout:
+                    
+                    while True:
+                        buf = fin.read(bufsiz)
+                        if not buf:
+                            break
+                        fout.write(buf)
     os.remove(zip_output)
     print(f'Wrote {str(zip_output.parent)}')
+
