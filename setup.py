@@ -21,6 +21,7 @@ setup(
         "gensim",
         "spacy",
         "pyyaml",
+        "gdown",
     ],
     author="Joseph Cappadona",
     author_email="josephcappadona27@gmail.com",
