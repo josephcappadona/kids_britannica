@@ -18,35 +18,45 @@ def Article(p):
 class KidsBritannicaDataSet:
     @staticmethod
     def download(size='small', data_dir='data', quiet=False, download_media=False, overwrite=False):
-        import gdown, zipfile
+        
 
         data_dir = Path(data_dir)
         os.makedirs(data_dir, exist_ok=True)
         if size == 'full':
-            url = 'https://drive.google.com/uc?id=1lPZr1d6Hj2tcSrfZpaUHX-sEK9og-g70'
             full_dir = data_dir / 'kbds'
-            output = full_dir / 'kbds_articles.zip'
+
+            article_url = 'https://drive.google.com/uc?id=1lPZr1d6Hj2tcSrfZpaUHX-sEK9og-g70'
+            media_url = 'https://drive.google.com/uc?id=1OLiRne5Tm8vw5emRe6FImJOGieUhPOHn'
+            
+            article_output = full_dir / 'kbds_articles.zip'
+            media_output = full_dir / 'kbds_media.zip'
+
         elif size == 'aligned':
-            url = 'https://drive.google.com/uc?id=1G3zTflSwHMBW-uj17MOkbG2s_MhE5NiE'
             aligned_dir = data_dir / 'kbds_aligned'
-            output =  aligned_dir / 'kbds_aligned_articles.zip'
+
+            article_url = 'https://drive.google.com/uc?id=1G3zTflSwHMBW-uj17MOkbG2s_MhE5NiE'
+            article_output =  aligned_dir / 'kbds_aligned_articles.zip'
+
+            media_url = None
+            media_output =  aligned_dir / 'kbds_aligned_media.zip'
         elif size == 'small':
-            url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
-            output = data_dir / 'kbds_small.zip'
+            small_dir = data_dir / 'kbds_small'
+
+            article_url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
+            article_output = small_dir / 'kbds_small_articles.zip'
+
+            media_url = None
+            media_output = small_dir / 'kbds_small_media.zip'
         else:
             raise ValueError(f'Invalid `size` ({size}): should be "small" or "full".')
         
-        output_dir = output.parent
+        output_dir = article_output.parent
         articles_dir = output_dir / 'articles'
         if not output_dir.exists() or overwrite:
-            os.makedirs(output_dir, exist_ok=True)
-            print(f'Downloading {output.name} from {url} ...')
-            gdown.download(url, str(output), quiet=quiet)
-            with zipfile.ZipFile(output, 'r') as zip_ref:
-                zip_ref.extractall(output_dir)
-            # rm zip
-            os.remove(output)
-            print(f'Wrote {output_dir}')
+            download_and_unzip(article_url, article_output)
+            if download_media and media_url:
+                download_and_unzip(media_url, media_output)
+
         return output_dir
         
         

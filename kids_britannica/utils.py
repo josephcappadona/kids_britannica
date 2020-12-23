@@ -67,3 +67,13 @@ def sanitize_filename(filename):
         if unicodedata.category(c) != 'Mn'
         and c in all_letters
     )
+
+def download_and_unzip(url, zip_output):
+    import gdown, zipfile
+    os.makedirs(zip_output.parent, exist_ok=True)
+    print(f'Downloading {zip_output.name} from {url} ...')
+    gdown.download(url, str(zip_output), quiet=False)
+    with zipfile.ZipFile(zip_output, 'r') as zip_ref:
+        zip_ref.extractall(zip_output.parent)
+    os.remove(zip_output)
+    print(f'Wrote {str(zip_output.parent)}')
