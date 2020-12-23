@@ -15,7 +15,12 @@ setup(
         "dataclasses",
         "m3u8downloader @ git+https://github.com/josephcappadona/m3u8downloader.git#egg=m3u8downloader",
         "munch",
-        "jsonextended"
+        "jsonextended",
+        "pandas",
+        "seaborn",
+        "gensim",
+        "spacy",
+        "pyyaml",
     ],
     author="Joseph Cappadona",
     author_email="josephcappadona27@gmail.com",
