@@ -1,37 +1,59 @@
 from .imports import *
 from .utils import *
-from .urls import *
-from .download import ArticleDownloader, sanitize_filename
-from .scraping import get_article_text, parse_article_from_html
 
-# class Article(File):
-#     def __init__(self, filename):
-#         super().__init__(self, open(filename))
-#         #self['adjacent_ids'] = {get_tier_from_url(url):get_id_from_url(url) for url in get_adjacent_articles(self['htmls']['text'])}
-
-#Article = edict.LazyLoad
-class Article(edict.LazyLoad):
-    def __init__(self, path):
-        path = Path(path)
-        if path.exists():
-            super().__init__(path)
+def Article(p):
+    try:
+        return json.load(open(p))
+    except:
+        # if error with filename, glob for the article by its id
+        path = Path(p)
+        query = str(p.parent / f"{p.stem.split(' '[0])} *.json")
+        fps = glob(query)
+        if fps:
+            return fps[0]
         else:
-            try:
-                #print(f"Could not find article ({str(path)}) at expected path.")
-                # find the path that matches the ID
-                query = '/'.join(path.parts[:-1]) + '/' + path.parts[-1].split(' ')[0] + ' *.json'
-                match = glob(query)[0]
-                path = Path(match)
-                super().__init__(path)
-            except:
-                raise ValueError(f"Could not find article {str(path)}")
+            return None
+        
 
 class KidsBritannicaDataSet:
-    def __init__(self, data_dir='data', username=None, password=None):
-        make_directories(data_dir)
-        self.data_dir = Path(data_dir)
+    @staticmethod
+    def download(size='small', data_dir='data', quiet=False):
+        import gdown, zipfile
+
+        data_dir = Path(data_dir)
+        os.makedirs(data_dir, exist_ok=True)
+        if size == 'full':
+            url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
+            output = data_dir / 'kbds_small.zip'
+        elif size == 'aligned':
+            url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
+            output = data_dir / 'kbds_small.zip'
+        elif size == 'small':
+            url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
+            output = data_dir / 'kbds_small.zip'
+        else:
+            raise ValueError(f'Invalid `size` ({size}): should be "small" or "full".')
+        
+        output_dir = data_dir / output.stem
+        if not output_dir.exists():
+            print(f'Downloading {output.name} from {url} ...')
+            gdown.download(url, str(output), quiet=quiet)
+            with zipfile.ZipFile(output, 'r') as zip_ref:
+                zip_ref.extractall(data_dir)
+            # rm zip
+            os.remove(output)
+            print(f'Wrote {output_dir}')
+        return output_dir
+        
+        
+    def __init__(self, data_dir='data/kbds_small'):
+        data_dir = Path(data_dir)
+        if not data_dir.exists():
+            stem  = data_dir.stem
+            size = 'small' if stem.endswith('_small') else 'full'
+            KidsBritannicaDataSet.download(size, data_dir.parent)
+        self.data_dir = data_dir
         self.articles_dir = self.data_dir / 'articles'
-        self.session = login(username, password)
         self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
         self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
         self.scholars_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='scholars')
@@ -39,6 +61,13 @@ class KidsBritannicaDataSet:
         if self.metadata_filepath.exists():
             print('Loading metadata from file...')
             self._metadata = json.load(open(self.metadata_filepath, 'rt'))
+    
+    @staticmethod
+    def get_article_paths(data_dir, tier='*'):
+        article_paths = glob(str(data_dir / 'articles' / tier / '*.json'))
+        if len(article_paths) == 0:
+            raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
+        return article_paths
     
     def article_by_id(self, article_id):
         md = self.metadata[article_id]
@@ -79,6 +108,47 @@ class KidsBritannicaDataSet:
     def scholars_articles(self):
         for json_path in self.scholars_article_paths:
             yield Article(json_path)
+            
+    @property
+    def aligned_triple_ids(self):
+        seen = set()
+        for article_id, md in self.metadata.items():
+            tier_to_id = {**md['adjacent_ids'], **{md['tier']: article_id}}
+            if len(tier_to_id) == 3 and article_id not in seen:
+                triple = (tier_to_id['kids'], tier_to_id['students'], tier_to_id['scholars'])
+                seen.update(triple)
+                yield triple
+        
+    @property
+    def aligned_triples(self):
+        for ids in self.aligned_triple_ids:
+            yield tuple(self.article_by_id(id_) if id_ in self.metadata else None
+                        for id_ in ids)
+    
+    @property
+    def kids_aligned(self):
+        for kids_id, _, _ in self.aligned_triple_ids:
+            if kids_id in self.metadata:
+                yield self.article_by_id(kids_id)
+    
+    @property
+    def students_aligned(self):
+        for _, student_id, _ in self.aligned_triple_ids:
+            if student_id in self.metadata:
+                yield self.article_by_id(student_id)
+    
+    @property
+    def scholars_aligned(self):
+        for _, _, scholars_id in self.aligned_triple_ids:
+            if scholars_id in self.metadata:
+                yield self.article_by_id(scholars_id)
+    
+    @property
+    def aligned(self):
+        for kids_id, scholars_id, students_id in self.aligned_triple_ids:
+            yield self.article_by_id(kids_id)
+            yield self.article_by_id(scholars_id)
+            yield self.article_by_id(students_id)
     
     @property
     def metadata(self):
@@ -105,44 +175,10 @@ class KidsBritannicaDataSet:
                 print('Writing metadata to file...')
                 write_json(self.metadata_filepath, self._metadata)
         return self._metadata
-
-    def download_urls(self, overwrite=True, limit=None, verbose=1):
-        data_dir = self.data_dir
-        urls_filepath = Path(data_dir) / 'urls.json'
-        if not urls_filepath.exists() or overwrite:
-            all_urls = get_all_urls(session=self.session, limit=limit, verbose=verbose)
-
-            write_json(urls_filepath, all_urls)
-            return all_urls
-    
-    def download_articles(self, urls=None, limit=None, **kwargs):
-        if urls is None:
-            url_json_path = self.data_dir / 'urls.json'
-            if not url_json_path.exists():
-                print("No URLs downloaded yet. Downloading now...")
-                urls = KidsBritannicaDataSet.download_urls(data_dir=self.data_dir, limit=limit)
-            else:
-                print("Loading URLs from file...")
-                urls = json.load(open(url_json_path, 'rt'))
-
-        print("Loading saved article IDs...")
-        saved_ids = get_saved_ids(self.data_dir)
-        urls = [url for url in urls if get_id_from_url(url) not in saved_ids] # filter
-        if limit:
-            urls = rand.choices(urls, k=limit) # random selection
-        print(f"{len(saved_ids)} articles already downloaded.")
-        print(f"Downloading {len(urls)} articles...")
-
-        dl = ArticleDownloader(data_dir=self.data_dir, session=self.session, **kwargs)
-        dl.download_urls(urls)
-    
-    @staticmethod
-    def download_media(data_dir='data'):
-        raise NotImplemented
     
     @property
     def statistics(self):
-        from .statistics import *
+        from .statistics import aggregate_statistics
         if not hasattr(self, '_statistics'):
             stats_path = self.data_dir / 'stats.json'
             if stats_path.exists():
@@ -181,18 +217,3 @@ class KidsBritannicaDataSet:
             self._statistics = stats
             self._structures = structures
         return self._structures
-
-    @staticmethod
-    def get_article_paths(data_dir, tier='*'):
-        article_paths = glob(str(data_dir / 'articles' / tier / '*.json'))
-        if len(article_paths) == 0:
-            raise ValueError(f"No articles could not be found in {str(data_dir)}. Please download the data first.")
-        return article_paths
-    
-    @staticmethod
-    def write_articles_from_html(data_dir, overwrite=False):
-        data_dir = Path(data_dir)
-        make_directories(data_dir)
-        html_paths = glob(str(data_dir / 'html' / '*.json'))
-        for html_path in html_paths:
-            article = parse_article_from_html(html_path, data_dir=data_dir, overwrite=overwrite)

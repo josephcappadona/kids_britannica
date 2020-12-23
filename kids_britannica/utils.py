@@ -18,20 +18,6 @@ def make_directories(data_dir='data'):
     os.makedirs(students_dir, exist_ok=True)
     os.makedirs(scholars_dir, exist_ok=True)
 
-def login(username, password):
-    session = requests.Session()
-    session.post('https://kids.britannica.com/login',
-                 data={'username': username,
-                       'password': password})
-    return session
-
-def clean_html(raw_html):
-    # adapted from https://stackoverflow.com/questions/9662346/python-code-to-remove-html-tags-from-a-string
-    if not raw_html:
-        return ''
-    r = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
-    cleaned = re.sub(r, '', raw_html)
-    return cleaned
 
 def clean_text(text):
     return ' '.join(text.split())
