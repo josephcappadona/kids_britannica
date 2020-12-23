@@ -17,29 +17,33 @@ def Article(p):
 
 class KidsBritannicaDataSet:
     @staticmethod
-    def download(size='small', data_dir='data', quiet=False):
+    def download(size='small', data_dir='data', quiet=False, download_media=False, overwrite=False):
         import gdown, zipfile
 
         data_dir = Path(data_dir)
         os.makedirs(data_dir, exist_ok=True)
         if size == 'full':
-            url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
-            output = data_dir / 'kbds_small.zip'
+            url = 'https://drive.google.com/uc?id=1lPZr1d6Hj2tcSrfZpaUHX-sEK9og-g70'
+            full_dir = data_dir / 'kbds'
+            output = full_dir / 'kbds_articles.zip'
         elif size == 'aligned':
-            url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
-            output = data_dir / 'kbds_small.zip'
+            url = 'https://drive.google.com/uc?id=1G3zTflSwHMBW-uj17MOkbG2s_MhE5NiE'
+            aligned_dir = data_dir / 'kbds_aligned'
+            output =  aligned_dir / 'kbds_aligned_articles.zip'
         elif size == 'small':
             url = 'https://drive.google.com/uc?id=1y90AXopy9yx3wHg2zuoyEGSrbCrRp-Kv'
             output = data_dir / 'kbds_small.zip'
         else:
             raise ValueError(f'Invalid `size` ({size}): should be "small" or "full".')
         
-        output_dir = data_dir / output.stem
-        if not output_dir.exists():
+        output_dir = output.parent
+        articles_dir = output_dir / 'articles'
+        if not output_dir.exists() or overwrite:
+            os.makedirs(output_dir, exist_ok=True)
             print(f'Downloading {output.name} from {url} ...')
             gdown.download(url, str(output), quiet=quiet)
             with zipfile.ZipFile(output, 'r') as zip_ref:
-                zip_ref.extractall(data_dir)
+                zip_ref.extractall(output_dir)
             # rm zip
             os.remove(output)
             print(f'Wrote {output_dir}')
@@ -50,7 +54,12 @@ class KidsBritannicaDataSet:
         data_dir = Path(data_dir)
         if not data_dir.exists():
             stem  = data_dir.stem
-            size = 'small' if stem.endswith('_small') else 'full'
+            if stem.endswith('_small'):
+                size = 'small'
+            elif stem.endswith('_aligned'):
+                size = 'aligned'
+            else:
+                size = 'full'
             KidsBritannicaDataSet.download(size, data_dir.parent)
         self.data_dir = data_dir
         self.articles_dir = self.data_dir / 'articles'
@@ -113,11 +122,12 @@ class KidsBritannicaDataSet:
     def aligned_triple_ids(self):
         seen = set()
         for article_id, md in self.metadata.items():
-            tier_to_id = {**md['adjacent_ids'], **{md['tier']: article_id}}
-            if len(tier_to_id) == 3 and article_id not in seen:
-                triple = (tier_to_id['kids'], tier_to_id['students'], tier_to_id['scholars'])
-                seen.update(triple)
-                yield triple
+            if md['tier'] == 'kids':
+                tier_to_id = {**md['aligned_ids'], **{md['tier']: article_id}}
+                if len(tier_to_id) == 3 and article_id not in seen:
+                    triple = (tier_to_id['kids'], tier_to_id['students'], tier_to_id['scholars'])
+                    seen.update(triple)
+                    yield triple
         
     @property
     def aligned_triples(self):
@@ -158,7 +168,7 @@ class KidsBritannicaDataSet:
                 self._metadata = json.load(open(self.metadata_filepath, 'rt'))
             else:
                 print("Building metadata from scratch...")
-                print("This could take anywhere from a few seconds to a couple hours depending "
+                print("This could take anywhere from a few seconds to a several minutes depending "
                       "on how much data you're processing and the speed of your computer")
                 metadata_keys = ['id', 'url', 'tier', 'title', 'aligned_ids', 'aligned_urls']
                 self._metadata = {}
@@ -217,3 +227,16 @@ class KidsBritannicaDataSet:
             self._statistics = stats
             self._structures = structures
         return self._structures
+    
+    def copy_subset(self, article_ids, new_data_dir='data/kbds_aligned'):
+        new_data_dir = Path(new_data_dir)
+        make_directories(new_data_dir)
+        article_dir = new_data_dir / 'articles'
+        for article_id in article_ids:
+            article = self.article_by_id(article_id)
+            filename = f"{article['id']} {article['title']}.json"
+            filename = sanitize_filename(filename)
+            article_path = article_dir / article['tier'] / filename
+            write_json(article_path, article)
+        print(f'Wrote {len(article_ids)} to {str(article_path)}')
+
