@@ -48,7 +48,7 @@ class KidsBritannicaDataSet:
             media_url = None
             media_output = small_dir / 'kbds_small_media.zip'
         else:
-            raise ValueError(f'Invalid `size` ({size}): should be "small" or "full".')
+            raise ValueError(f'Invalid `size` ({size}): should be "small" "aligned" or "full".')
         
         output_dir = article_output.parent
         articles_dir = output_dir / 'articles'
@@ -186,11 +186,15 @@ class KidsBritannicaDataSet:
                     article_metadata = {}
                     for key in metadata_keys:
                         if key in article:
-                            if not isinstance(article[key], edict.LazyLoad):
-                                article_metadata[key] = article[key]
-                            else:
-                                article_metadata[key] = article[key].to_dict()
+                            article_metadata[key] = article[key]
                     article_metadata['path'] = article_path
+
+                    media_fps = []
+                    for media in article['media']:
+                        media_fp = self.data_dir / article['tier'] / f"{article['id']} {article['title']}" / f"{media['id']}.{media['data']['file-type']}"
+                        media_fps.append(str(media_fps))
+                    article_metadata['media_fps'] = media_fps
+                        
                     self._metadata[article_metadata['id']] = article_metadata
                 print('Writing metadata to file...')
                 write_json(self.metadata_filepath, self._metadata)
