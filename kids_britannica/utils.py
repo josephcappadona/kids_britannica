@@ -69,14 +69,15 @@ def sanitize_filename(filename):
     )
 
 def download_and_unzip(url, zip_output, overwrite=False):
-    import gdown, zipfile
+    import gdown
+    from .zipfile2 import ZipFile
     data_dir = zip_output.parent
     make_directories(data_dir)
     
     print(f'Downloading {zip_output.name} from {url} ...')
     if not zip_output.exists() or overwrite:
         gdown.download(url, str(zip_output), quiet=False)
-    with zipfile.ZipFile(zip_output, 'r') as zip_ref:
+    with ZipFile(zip_output, 'r') as zip_ref:
         #zip_ref.extractall(zip_output.parent)
         
         for info in zip_ref.infolist():
