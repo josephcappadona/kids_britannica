@@ -19,7 +19,6 @@ class KidsBritannicaDataSet:
     @staticmethod
     def download(size='small', data_dir='data', quiet=False, download_media=False, overwrite=False):
         
-
         data_dir = Path(data_dir)
         os.makedirs(data_dir, exist_ok=True)
         if size == 'full':
@@ -188,13 +187,7 @@ class KidsBritannicaDataSet:
                         if key in article:
                             article_metadata[key] = article[key]
                     article_metadata['path'] = article_path
-
-                    media_fps = []
-                    for media in article['media']:
-                        media_fp = self.data_dir / article['tier'] / f"{article['id']} {article['title']}" / f"{media['id']}.{media['data']['file-type']}"
-                        media_fps.append(str(media_fps))
-                    article_metadata['media_fps'] = media_fps
-                        
+                    
                     self._metadata[article_metadata['id']] = article_metadata
                 print('Writing metadata to file...')
                 write_json(self.metadata_filepath, self._metadata)
@@ -254,4 +247,10 @@ class KidsBritannicaDataSet:
             print(str(article_path))
             write_json(article_path, article)
         print(f'Wrote {len(article_ids)} articles to {str(article_dir)}')
-
+    
+    def media_paths_by_article_id(self, article_id, types=['IMAGE', 'VIDEO', 'AUDIO']):
+        article = self.article_by_id(article_id)
+        for media in article['media']:
+            if media['data'] and media['media-type'] in types:
+                media_fp = self.data_dir / article['tier'] / f"{article['id']} {article['title']}" / f"{media['id']}.{media['data']['file-type']}"
+                yield str(media_fp)
