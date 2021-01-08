@@ -81,7 +81,9 @@ def download_and_unzip(url, zip_output, overwrite=False):
         #zip_ref.extractall(zip_output.parent)
         
         for info in zip_ref.infolist():
-            outpath = data_dir / Path(info.filename)
+            outpath = data_dir / info.filename
+            outdir = outpath.parent
+            os.makedirs(outdir, exist_ok=True)
             bufsiz = 16 * 1024
             if not outpath.is_dir():
                 with zip_ref.open(info) as fin, open(outpath, 'wb') as fout:
