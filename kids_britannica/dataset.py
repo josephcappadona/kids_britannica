@@ -23,6 +23,7 @@ class KidsBritannicaDataSet:
         os.makedirs(data_dir, exist_ok=True)
         if size == 'full':
             full_dir = data_dir / 'kbds'
+            os.makedirs(full_dir, exist_ok=True)
 
             article_url = 'https://drive.google.com/uc?id=1lPZr1d6Hj2tcSrfZpaUHX-sEK9og-g70'
             media_url = 'https://drive.google.com/uc?id=1OLiRne5Tm8vw5emRe6FImJOGieUhPOHn'
@@ -32,6 +33,7 @@ class KidsBritannicaDataSet:
 
         elif size == 'aligned':
             aligned_dir = data_dir / 'kbds_aligned'
+            os.makedirs(aligned_dir, exist_ok=True)
 
             article_url = 'https://drive.google.com/uc?id=1G3zTflSwHMBW-uj17MOkbG2s_MhE5NiE'
             article_output =  aligned_dir / 'kbds_aligned_articles.zip'
@@ -40,6 +42,7 @@ class KidsBritannicaDataSet:
             media_output =  aligned_dir / 'kbds_aligned_media.zip'
         elif size == 'small':
             small_dir = data_dir / 'kbds_small'
+            os.makedirs(small_dir, exist_ok=True)
 
             article_url = 'https://drive.google.com/uc?id=1WYNOwQ3vrnoZvtfR6ym3n-iP1Ty-Chhj'
             article_output = small_dir / 'kbds_small_articles.zip'
@@ -72,6 +75,7 @@ class KidsBritannicaDataSet:
             KidsBritannicaDataSet.download(size, data_dir.parent)
         self.data_dir = data_dir
         self.articles_dir = self.data_dir / 'articles'
+        self.media_dir = self.data_dir / 'media'
         self.kids_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='kids')
         self.students_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='students')
         self.scholars_article_paths = KidsBritannicaDataSet.get_article_paths(self.data_dir, tier='scholars')
@@ -177,8 +181,7 @@ class KidsBritannicaDataSet:
                 self._metadata = json.load(open(self.metadata_filepath, 'rt'))
             else:
                 print("Building metadata from scratch...")
-                print("This could take anywhere from a few seconds to a several minutes depending "
-                      "on how much data you're processing and the speed of your computer")
+                print("This could take several minutes.")
                 metadata_keys = ['id', 'url', 'tier', 'title', 'aligned_ids', 'aligned_urls']
                 self._metadata = {}
                 for article, article_path in zip(self.articles, self.article_paths):
@@ -248,9 +251,10 @@ class KidsBritannicaDataSet:
             write_json(article_path, article)
         print(f'Wrote {len(article_ids)} articles to {str(article_dir)}')
     
-    def media_paths_by_article_id(self, article_id, types=['IMAGE', 'VIDEO', 'AUDIO']):
-        article = self.article_by_id(article_id)
-        for media in article['media']:
-            if media['data'] and media['media-type'] in types:
-                media_fp = self.data_dir / article['tier'] / f"{article['id']} {article['title']}" / f"{media['id']}.{media['data']['file-type']}"
-                yield str(media_fp)
+    def medias_by_article_id(self, article_id, types=['IMAGE', 'VIDEO', 'AUDIO']):
+            article = self.article_by_id(article_id)
+            for media in article['media']:
+                if media['data'] and media['media-type'] in types:
+                    media_fp = self.media_dir / article['tier'] / sanitize_filename(f"{article['id']} {article['title']}") / f"{media['id']}.{media['data']['file-type']}"
+                    media['filepath'] = str(media_fp)
+                    yield media

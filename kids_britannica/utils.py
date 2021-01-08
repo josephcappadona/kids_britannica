@@ -18,6 +18,8 @@ def make_directories(data_dir='data'):
     os.makedirs(students_dir, exist_ok=True)
     os.makedirs(scholars_dir, exist_ok=True)
 
+def exists(obj):
+    return obj is not None
 
 def clean_text(text):
     return ' '.join(text.split())
@@ -68,31 +70,42 @@ def sanitize_filename(filename):
         and c in all_letters
     )
 
-def download_and_unzip(url, zip_output, overwrite=False):
-    import gdown
+IMG_FILE_TYPES = set(['.png', '.jpg', '.jpeg', '.gif'])
+AUDIO_FILE_TYPES = set(['.wav', '.mp3', '.m4a'])
+VIDEO_FILE_TYPES = set(['.avi', '.mp4', '.flv'])
+FILE_TYPES = IMG_FILE_TYPES.union(AUDIO_FILE_TYPES).union(VIDEO_FILE_TYPES)
+def unzip(zip_output, data_dir):
     from .zipfile2 import ZipFile
-    data_dir = zip_output.parent
-    make_directories(data_dir)
+    with ZipFile(zip_output, 'r') as zip_ref:
+        #zip_ref.extractall(zip_output.parent)
+        node_paths = [(info, Path(data_dir) / info.filename)
+                      for info in zip_ref.infolist()]
+        
+        file_paths = filter(lambda x: len(x[1].suffix) > 0 and x[1].suffix in FILE_TYPES,
+                            node_paths)
+
+        for info, outpath in file_paths:
+            bufsiz = 16 * 1024
+            outdir = outpath.parent
+            os.makedirs(outdir, exist_ok=True)
+            with zip_ref.open(info) as fin, open(outpath, 'wb') as fout:
+                while True:
+                    buf = fin.read(bufsiz)
+                    if not buf:
+                        break
+                    fout.write(buf)
+
+def download_and_unzip(url, zip_output, overwrite=False, delete_zip=False):
     
     print(f'Downloading {zip_output.name} from {url} ...')
     if not zip_output.exists() or overwrite:
+        import gdown
         gdown.download(url, str(zip_output), quiet=False)
-    with ZipFile(zip_output, 'r') as zip_ref:
-        #zip_ref.extractall(zip_output.parent)
-        
-        for info in zip_ref.infolist():
-            outpath = data_dir / info.filename
-            outdir = outpath.parent
-            os.makedirs(outdir, exist_ok=True)
-            bufsiz = 16 * 1024
-            if not outpath.is_dir():
-                with zip_ref.open(info) as fin, open(outpath, 'wb') as fout:
-                    
-                    while True:
-                        buf = fin.read(bufsiz)
-                        if not buf:
-                            break
-                        fout.write(buf)
-    os.remove(zip_output)
+    
+    data_dir = zip_output.parent
+    unzip(zip_output, data_dir)
+    
+    if delete_zip:
+        os.remove(zip_output)
     print(f'Wrote {str(zip_output.parent)}')
 
