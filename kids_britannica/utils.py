@@ -77,23 +77,7 @@ FILE_TYPES = IMG_FILE_TYPES.union(AUDIO_FILE_TYPES).union(VIDEO_FILE_TYPES)
 def unzip(zip_output, data_dir):
     from .zipfile2 import ZipFile
     with ZipFile(zip_output, 'r') as zip_ref:
-        #zip_ref.extractall(zip_output.parent)
-        node_paths = [(info, Path(data_dir) / info.filename)
-                      for info in zip_ref.infolist()]
-        
-        file_paths = filter(lambda x: len(x[1].suffix) > 0 and x[1].suffix in FILE_TYPES,
-                            node_paths)
-
-        for info, outpath in file_paths:
-            bufsiz = 16 * 1024
-            outdir = outpath.parent
-            os.makedirs(outdir, exist_ok=True)
-            with zip_ref.open(info) as fin, open(outpath, 'wb') as fout:
-                while True:
-                    buf = fin.read(bufsiz)
-                    if not buf:
-                        break
-                    fout.write(buf)
+        zip_ref.extractall(zip_output.parent)
 
 def download_and_unzip(url, zip_output, overwrite=False, delete_zip=False):
     
